@@ -1,8 +1,19 @@
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import DottedGlowBackground from './components/DottedGlowBackground';
-import { SparklesIcon, ThinkingIcon } from './components/Icons';
+import { ThinkingIcon } from './components/Icons';
+
+// Registro de Service Worker para PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').then(registration => {
+      console.log('SW registrado con éxito:', registration.scope);
+    }, err => {
+      console.log('Fallo al registrar SW:', err);
+    });
+  });
+}
 
 type Priority = 'Alta' | 'Media' | 'Baja';
 
@@ -12,43 +23,114 @@ interface Task {
   description: string;
   dueDate: string;
   priority: Priority;
+  reminderMinutes: number; 
   completed: boolean;
   createdAt: number;
+  notified?: boolean;
 }
 
+const PRIORITY_VALUE = { 'Alta': 3, 'Media': 2, 'Baja': 1 };
+
+const AppLogo = ({ size = 120 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="app-logo-svg">
+    <defs>
+      <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#6750A4" />
+        <stop offset="100%" stopColor="#00BCD4" />
+      </linearGradient>
+      <filter id="glow">
+        <feGaussianBlur stdDeviation="3" result="blur" />
+        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+      </filter>
+    </defs>
+    <circle cx="50" cy="50" r="42" stroke="url(#logoGrad)" strokeWidth="1" strokeDasharray="4 4" opacity="0.4" />
+    <path d="M35 50L48 63L70 38" stroke="url(#logoGrad)" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" filter="url(#glow)" className="logo-path" />
+    <rect x="25" y="25" width="50" height="50" rx="12" stroke="url(#logoGrad)" strokeWidth="2" opacity="0.2" />
+  </svg>
+);
+
+const SplashScreen = ({ onFinish }: { onFinish: () => void }) => {
+  useEffect(() => {
+    const timer = setTimeout(onFinish, 2500);
+    return () => clearTimeout(timer);
+  }, [onFinish]);
+
+  return (
+    <div className="splash-screen">
+      <div className="splash-content">
+        <AppLogo />
+        <h1 className="splash-title">Task Master</h1>
+        <p className="splash-tagline">Creatividad • Tecnología • Orden</p>
+        <div className="splash-loader">
+          <div className="loader-bar"></div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const TaskManagerApp = () => {
-  // Estados de Tareas y Filtros
+  const [showSplash, setShowSplash] = useState(true);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [filterPriority, setFilterPriority] = useState<Priority | 'Todas'>('Todas');
   const [filterStatus, setFilterStatus] = useState<'Todas' | 'Pendientes' | 'Completadas'>('Todas');
   
-  // Estados de UI
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [snackbar, setSnackbar] = useState<{ message: string; visible: boolean; onUndo?: () => void } | null>(null);
   const undoTimeoutRef = useRef<number | null>(null);
+  const notifiedIds = useRef<Set<string>>(new Set());
 
-  // Estados del Formulario (con valores iniciales claros)
+  // Form State
   const [formTitle, setFormTitle] = useState('');
   const [formDesc, setFormDesc] = useState('');
   const [formPriority, setFormPriority] = useState<Priority>('Media');
   const [formDate, setFormDate] = useState('');
+  const [formReminder, setFormReminder] = useState(15);
 
-  // Persistencia inicial
   useEffect(() => {
-    const saved = localStorage.getItem('android_tasks_final_v1');
+    const saved = localStorage.getItem('task_master_v2_final');
     if (saved) {
       try {
-        setTasks(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        setTasks(parsed);
       } catch (e) {
         console.error("Error cargando tareas", e);
       }
     }
+    
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
   }, []);
 
-  // Guardado automático
   useEffect(() => {
-    localStorage.setItem('android_tasks_final_v1', JSON.stringify(tasks));
+    localStorage.setItem('task_master_v2_final', JSON.stringify(tasks));
+  }, [tasks]);
+
+  useEffect(() => {
+    const checkNotifications = () => {
+      const now = Date.now();
+      tasks.forEach(task => {
+        if (!task.completed && task.dueDate && !notifiedIds.current.has(task.id)) {
+          const dueTime = new Date(task.dueDate).getTime();
+          const notifyTime = dueTime - (task.reminderMinutes * 60000);
+          
+          if (now >= notifyTime && now < dueTime + 60000) {
+            if (Notification.permission === "granted") {
+              new Notification("Recordatorio: " + task.title, {
+                body: `Vence pronto (${new Date(task.dueDate).toLocaleTimeString()}). Prioridad: ${task.priority}`,
+                icon: 'https://cdn-icons-png.flaticon.com/512/906/906334.png'
+              });
+              notifiedIds.current.add(task.id);
+            }
+          }
+        }
+      });
+    };
+
+    const interval = setInterval(checkNotifications, 30000);
+    return () => clearInterval(interval);
   }, [tasks]);
 
   const showToast = (message: string, onUndo?: () => void) => {
@@ -66,20 +148,21 @@ const TaskManagerApp = () => {
       description: formDesc.trim(),
       priority: formPriority,
       dueDate: formDate,
+      reminderMinutes: formReminder,
     };
 
     if (editingTask) {
       setTasks(prev => prev.map(t => t.id === editingTask.id ? { ...t, ...taskData } : t));
-      showToast("Tarea actualizada con éxito");
+      showToast("Tarea actualizada");
     } else {
       const newTask: Task = {
-        id: Math.random().toString(36).substring(2, 11),
+        id: Math.random().toString(36).substr(2, 9),
         ...taskData,
         completed: false,
         createdAt: Date.now()
       };
       setTasks(prev => [newTask, ...prev]);
-      showToast("Nueva tarea creada");
+      showToast("Tarea creada con éxito");
     }
     closeModal();
   };
@@ -89,13 +172,13 @@ const TaskManagerApp = () => {
     if (!taskToDelete) return;
     setTasks(prev => prev.filter(t => t.id !== id));
     showToast("Tarea eliminada", () => {
-      setTasks(prev => [taskToDelete, ...prev].sort((a,b) => b.createdAt - a.createdAt));
+      setTasks(prev => [...prev, taskToDelete]);
     });
   }, [tasks]);
 
-  const toggleTask = (id: string) => {
+  const toggleTask = useCallback((id: string) => {
     setTasks(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
-  };
+  }, []);
 
   const openModal = (task?: Task) => {
     if (task) {
@@ -104,12 +187,14 @@ const TaskManagerApp = () => {
       setFormDesc(task.description);
       setFormPriority(task.priority);
       setFormDate(task.dueDate);
+      setFormReminder(task.reminderMinutes || 15);
     } else {
       setEditingTask(null);
       setFormTitle('');
       setFormDesc('');
       setFormPriority('Media');
       setFormDate('');
+      setFormReminder(15);
     }
     setIsModalOpen(true);
   };
@@ -119,81 +204,96 @@ const TaskManagerApp = () => {
     setEditingTask(null);
   };
 
-  const filteredTasks = tasks.filter(t => {
-    const pMatch = filterPriority === 'Todas' || t.priority === filterPriority;
-    const sMatch = filterStatus === 'Todas' || (filterStatus === 'Completadas' ? t.completed : !t.completed);
-    return pMatch && sMatch;
-  }).sort((a, b) => b.createdAt - a.createdAt);
+  const processedTasks = useMemo(() => {
+    return tasks
+      .filter(t => {
+        const pMatch = filterPriority === 'Todas' || t.priority === filterPriority;
+        const sMatch = filterStatus === 'Todas' || (filterStatus === 'Completadas' ? t.completed : !t.completed);
+        return pMatch && sMatch;
+      })
+      .sort((a, b) => {
+        if (PRIORITY_VALUE[b.priority] !== PRIORITY_VALUE[a.priority]) {
+          return PRIORITY_VALUE[b.priority] - PRIORITY_VALUE[a.priority];
+        }
+        return b.createdAt - a.createdAt;
+      });
+  }, [tasks, filterPriority, filterStatus]);
+
+  if (showSplash) {
+    return <SplashScreen onFinish={() => setShowSplash(false)} />;
+  }
 
   return (
-    <div className="app-shell android-theme">
-      <DottedGlowBackground opacity={0.15} />
+    <div className="app-shell android-native animate-fade-in">
+      <DottedGlowBackground opacity={0.08} />
       
-      {/* Barra de Navegación Superior Estilo Android */}
       <nav className="top-nav">
         <div className="nav-container">
           <div className="logo-section">
-            <span className="logo-dot pulse"></span>
-            <h1>TaskMaster Pro</h1>
+            <div className="mini-logo"><AppLogo size={24} /></div>
+            <h1>Task Master</h1>
           </div>
           <div className="nav-filters">
             <select 
-              className="android-select"
+              className="native-select"
               value={filterStatus} 
               onChange={(e) => setFilterStatus(e.target.value as any)}
             >
-              <option value="Todas">Estados</option>
+              <option value="Todas">Todos los estados</option>
               <option value="Pendientes">Pendientes</option>
-              <option value="Completadas">Hechas</option>
+              <option value="Completadas">Completadas</option>
             </select>
           </div>
         </div>
       </nav>
 
-      {/* Chips de Filtrado de Prioridad */}
-      <header className="filter-bar">
-        <div className="chip-container no-scrollbar">
-          {(['Todas', 'Baja', 'Media', 'Alta'] as const).map(p => (
+      <div className="chip-bar">
+        <div className="chip-scroll">
+          {(['Todas', 'Alta', 'Media', 'Baja'] as const).map(p => (
             <button 
               key={p}
-              className={`chip ${filterPriority === p ? 'active' : ''} ${p !== 'Todas' ? 'p-' + p.toLowerCase() : ''}`} 
+              className={`chip-v2 ${filterPriority === p ? 'active' : ''} ${p !== 'Todas' ? 'border-' + p.toLowerCase() : ''}`} 
               onClick={() => setFilterPriority(p)}
             >
               {p}
             </button>
           ))}
         </div>
-      </header>
+      </div>
 
-      {/* Área de Contenido Principal */}
-      <main className="content-area">
-        {filteredTasks.length === 0 ? (
-          <div className="empty-state animate-fade-in">
-            <div className="empty-icon"><ThinkingIcon /></div>
-            <h2>Todo en orden</h2>
-            <p>No hay tareas que mostrar. Pulsa el botón + para añadir una.</p>
+      <main className="main-feed">
+        {processedTasks.length === 0 ? (
+          <div className="empty-view">
+            <ThinkingIcon />
+            <p>{tasks.length === 0 ? "Empieza creando tu primera tarea" : "No hay tareas que coincidan con el filtro"}</p>
           </div>
         ) : (
-          <div className="task-list">
-            {filteredTasks.map(task => (
-              <div key={task.id} className={`task-item ${task.completed ? 'is-completed' : ''} priority-${task.priority.toLowerCase()}`}>
-                <div className="task-check" onClick={(e) => { e.stopPropagation(); toggleTask(task.id); }}>
-                  <div className={`checkbox-custom ${task.completed ? 'checked' : ''}`}></div>
+          <div className="task-stack">
+            {processedTasks.map(task => (
+              <div key={task.id} className={`task-tile ${task.completed ? 'is-done' : ''} priority-border-${task.priority.toLowerCase()}`} onClick={() => openModal(task)}>
+                <div className="tile-check" onClick={(e) => { 
+                  e.stopPropagation(); 
+                  toggleTask(task.id); 
+                }}>
+                  <div className={`native-checkbox ${task.completed ? 'checked' : ''}`}></div>
                 </div>
-                <div className="task-body" onClick={() => openModal(task)}>
-                  <div className="task-main">
+                <div className="tile-content">
+                  <div className="tile-title-row">
                     <h3>{task.title}</h3>
                     <span className={`priority-tag ${task.priority.toLowerCase()}`}>{task.priority}</span>
                   </div>
-                  {task.description && <p className="desc-text">{task.description}</p>}
+                  {task.description && <p className="tile-desc">{task.description}</p>}
                   {task.dueDate && (
-                    <div className="task-meta">
-                      <span className="icon-calendar">📅</span>
-                      {new Date(task.dueDate).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                    <div className="tile-date">
+                      📅 {new Date(task.dueDate).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                      {task.reminderMinutes > 0 && <span className="reminder-indicator"> 🔔 {task.reminderMinutes}m antes</span>}
                     </div>
                   )}
                 </div>
-                <button className="delete-action-btn" onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }}>
+                <button className="tile-delete" onClick={(e) => { 
+                  e.stopPropagation(); 
+                  deleteTask(task.id); 
+                }} aria-label="Eliminar">
                   &times;
                 </button>
               </div>
@@ -202,74 +302,88 @@ const TaskManagerApp = () => {
         )}
       </main>
 
-      {/* Botón Flotante (FAB) */}
-      <button className="fab ripple" onClick={() => openModal()} aria-label="Añadir tarea">
-        <span className="fab-plus">+</span>
+      <button className="fab-button ripple" onClick={() => openModal()} aria-label="Nueva tarea">
+        <span>+</span>
       </button>
 
-      {/* Modal de Edición / Creación */}
       {isModalOpen && (
-        <div className="modal-backdrop" onClick={closeModal}>
-          <div className="modal-sheet" onClick={e => e.stopPropagation()}>
-            <div className="modal-drag-handle"></div>
-            <div className="modal-header">
-              <h2>{editingTask ? 'Editar tarea' : 'Nueva tarea'}</h2>
-              <button className="close-sheet" onClick={closeModal}>&times;</button>
+        <div className="bottom-sheet-overlay" onClick={closeModal}>
+          <div className="bottom-sheet" onClick={e => e.stopPropagation()}>
+            <div className="sheet-handle"></div>
+            <div className="sheet-header">
+              <h2>{editingTask ? 'Editar actividad' : 'Nueva actividad'}</h2>
+              <p className="sheet-subtitle">Define prioridad y avisos para un mejor control.</p>
             </div>
+            
             <form onSubmit={handleSaveTask}>
-              <div className="input-group">
-                <input 
-                  autoFocus
-                  className="main-input"
-                  value={formTitle} 
-                  onChange={e => setFormTitle(e.target.value)} 
-                  placeholder="Título de la tarea"
-                  required
-                />
-              </div>
-              <div className="input-group">
-                <textarea 
-                  className="desc-input"
-                  value={formDesc} 
-                  onChange={e => setFormDesc(e.target.value)} 
-                  placeholder="Detalles adicionales..."
-                  rows={2}
-                />
-              </div>
-              
-              <div className="input-group">
-                <label className="section-label">Prioridad del Sprint</label>
-                <div className="priority-selector-grid">
+              <div className="sheet-body">
+                <div className="input-field">
+                  <label>Título de la tarea</label>
+                  <input 
+                    autoFocus
+                    className="sheet-input-title"
+                    value={formTitle} 
+                    onChange={e => setFormTitle(e.target.value)} 
+                    placeholder="Ej: Revisar informe mensual"
+                    required
+                  />
+                </div>
+                
+                <div className="input-field">
+                  <label>Descripción (opcional)</label>
+                  <textarea 
+                    className="sheet-input-desc"
+                    value={formDesc} 
+                    onChange={e => setFormDesc(e.target.value)} 
+                    placeholder="Detalles importantes..."
+                    rows={2}
+                  />
+                </div>
+
+                <label className="sheet-label">Asignar Prioridad</label>
+                <div className="priority-grid">
                   {(['Baja', 'Media', 'Alta'] as Priority[]).map(p => (
-                    <button 
+                    <div 
                       key={p}
-                      type="button"
-                      className={`p-selector-btn ${p.toLowerCase()} ${formPriority === p ? 'is-selected' : ''}`}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setFormPriority(p);
-                      }}
+                      className={`priority-item ${formPriority === p ? 'selected' : ''} p-${p.toLowerCase()}`}
+                      onClick={() => setFormPriority(p)}
                     >
-                      <div className="dot"></div>
+                      <div className={`item-indicator ${p.toLowerCase()}`}></div>
                       <span>{p}</span>
-                    </button>
+                    </div>
                   ))}
+                </div>
+
+                <div className="row-fields">
+                  <div className="input-field half">
+                    <label className="sheet-label">Fecha Límite</label>
+                    <input 
+                      type="datetime-local" 
+                      className="sheet-input-date"
+                      value={formDate} 
+                      onChange={e => setFormDate(e.target.value)} 
+                    />
+                  </div>
+                  <div className="input-field half">
+                    <label className="sheet-label">Avisar antes</label>
+                    <select 
+                      className="sheet-select-reminder"
+                      value={formReminder}
+                      onChange={e => setFormReminder(Number(e.target.value))}
+                    >
+                      <option value={0}>Sin aviso</option>
+                      <option value={5}>5 min antes</option>
+                      <option value={15}>15 min antes</option>
+                      <option value={30}>30 min antes</option>
+                      <option value={60}>1 hora antes</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
-              <div className="input-group">
-                <label className="section-label">Fecha Límite (Avisos HU-07)</label>
-                <input 
-                  type="datetime-local" 
-                  className="date-input"
-                  value={formDate} 
-                  onChange={e => setFormDate(e.target.value)} 
-                />
-              </div>
-
-              <div className="modal-footer">
-                <button type="submit" className="submit-btn-android ripple">
-                  {editingTask ? 'Actualizar Tarea' : 'Crear Tarea'}
+              <div className="sheet-footer">
+                <button type="submit" className="sheet-btn-primary">
+                  {editingTask ? 'Guardar Cambios' : 'Confirmar Tarea'}
                 </button>
               </div>
             </form>
@@ -277,13 +391,12 @@ const TaskManagerApp = () => {
         </div>
       )}
 
-      {/* Snackbar / Toast de Android */}
       {snackbar && (
-        <div className={`android-toast ${snackbar.visible ? 'show' : ''}`}>
-          <div className="toast-body">
-            <span className="toast-msg">{snackbar.message}</span>
+        <div className={`native-snackbar ${snackbar.visible ? 'show' : ''}`}>
+          <div className="snackbar-content">
+            <span className="snackbar-text">{snackbar.message}</span>
             {snackbar.onUndo && (
-              <button className="undo-action" onClick={() => {
+              <button className="snackbar-action" onClick={() => {
                 snackbar.onUndo?.();
                 setSnackbar(null);
               }}>DESHACER</button>

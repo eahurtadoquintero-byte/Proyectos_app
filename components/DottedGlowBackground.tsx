@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -123,7 +124,16 @@ export default function DottedGlowBackground({
   }, [gap, radius, color, glowColor, opacity, speedMin, speedMax, speedScale]);
 
   return (
-    <div ref={containerRef} className={className} style={{ position: "absolute", inset: 0, zIndex: 0 }}>
+    <div 
+      ref={containerRef} 
+      className={className} 
+      style={{ 
+        position: "absolute", 
+        inset: 0, 
+        zIndex: 0,
+        pointerEvents: 'none' 
+      }}
+    >
       <canvas ref={canvasRef} style={{ display: "block" }} />
     </div>
   );
