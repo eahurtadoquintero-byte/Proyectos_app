@@ -1,72 +1,77 @@
 
 :root {
-  --android-primary: #6750A4;
-  --android-on-primary: #FFFFFF;
-  --android-surface: #FBFDF8;
-  --android-secondary-container: #E8DEF8;
-  --android-on-secondary-container: #1D192B;
-  --android-outline: #79747E;
+  --m3-primary: #6750A4;
+  --m3-on-primary: #FFFFFF;
+  --m3-surface: #FBFDF8;
+  --m3-secondary-container: #E8DEF8;
+  --m3-on-secondary-container: #1D192B;
+  --m3-outline: #79747E;
+  --m3-surface-variant: #E7E0EC;
   
-  --p-alta: #B3261E;
-  --p-media: #E2BE00;
-  --p-baja: #0061A4;
-  
-  --safe-area-bottom: env(safe-area-inset-bottom, 20px);
+  --color-high: #B3261E;
+  --color-medium: #E2BE00;
+  --color-low: #0061A4;
+
+  --font-main: 'Inter', system-ui, -apple-system, sans-serif;
+  --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 * { 
   box-sizing: border-box; 
-  -webkit-tap-highlight-color: transparent; 
-  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
 }
 
 body {
   margin: 0;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: var(--android-surface);
-  color: #1D1B20;
+  font-family: var(--font-main);
+  background-color: var(--m3-surface);
+  color: #1C1B1F;
   overflow-x: hidden;
-  user-select: none;
+  position: relative;
 }
 
+/* App Structure */
 .app-shell {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   position: relative;
+  z-index: 1;
 }
 
-/* Nav Bar Estilo Android 14 */
+/* Nav Bar - Material Header */
 .top-nav {
   position: sticky;
   top: 0;
   z-index: 1000;
   background: rgba(251, 253, 248, 0.95);
-  backdrop-filter: blur(8px);
-  padding: 12px 20px;
-  border-bottom: 1px solid rgba(0,0,0,0.05);
+  backdrop-filter: blur(12px);
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--m3-surface-variant);
 }
 
 .nav-container {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  max-width: 800px;
+  max-width: 900px;
   margin: 0 auto;
 }
 
 .logo-section {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   cursor: pointer;
+  padding: 4px;
 }
 
 .logo-section h1 {
-  font-size: 1.1rem;
-  font-weight: 700;
+  font-size: 1.25rem;
+  font-weight: 800;
   margin: 0;
-  color: var(--android-primary);
+  color: var(--m3-primary);
 }
 
 .nav-actions {
@@ -75,411 +80,283 @@ body {
   gap: 12px;
 }
 
-.icon-btn {
-  background: transparent;
-  border: none;
-  color: var(--android-primary);
+/* Status Tabs UI - Mejorado para touch */
+.status-tab-group {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px;
-  border-radius: 50%;
-  cursor: pointer;
+  background: var(--m3-surface-variant);
+  padding: 4px;
+  border-radius: 16px;
+  gap: 4px;
 }
 
-.android-select {
+.status-tab {
   border: none;
-  background: var(--android-secondary-container);
-  color: var(--android-on-secondary-container);
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  outline: none;
+  background: transparent;
+  min-width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--m3-on-secondary-container);
+  cursor: pointer;
+  transition: var(--transition-smooth);
 }
 
-/* Chips de Prioridad */
+.status-tab.active {
+  background: var(--m3-primary);
+  color: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Filter Section */
 .filter-bar {
-  padding: 15px 0;
-  background: var(--android-surface);
+  padding: 16px 0;
+  background: white;
+  border-bottom: 1px solid var(--m3-surface-variant);
+  position: relative;
   z-index: 900;
 }
 
-.chip-container {
+.filter-scroll-container {
   display: flex;
-  gap: 10px;
+  align-items: center;
+  gap: 12px;
   overflow-x: auto;
-  padding: 0 20px;
-  max-width: 800px;
+  padding: 0 16px;
+  max-width: 900px;
   margin: 0 auto;
 }
 
-.no-scrollbar::-webkit-scrollbar { display: none; }
-
-.chip {
+.filter-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--m3-outline);
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px;
+  white-space: nowrap;
+}
+
+.priority-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
   border-radius: 24px;
-  border: 1px solid var(--android-outline);
+  border: 1px solid var(--m3-outline);
   background: white;
   font-size: 0.9rem;
-  font-weight: 500;
-  white-space: nowrap;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: pointer;
-  position: relative;
-}
-
-.chip.active {
-  background: var(--android-secondary-container);
-  border-color: var(--android-primary);
-  color: var(--android-primary);
   font-weight: 600;
-  box-shadow: 0 2px 8px rgba(103, 80, 164, 0.1);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  white-space: nowrap;
+  min-height: 44px;
 }
 
-.chip-badge {
-  background: var(--android-primary);
+.priority-chip.active {
+  background: var(--m3-secondary-container);
+  border-color: var(--m3-primary);
+  color: var(--m3-primary);
+}
+
+.chip-count-bubble {
+  background: var(--m3-primary);
   color: white;
   font-size: 0.7rem;
-  padding: 2px 6px;
+  padding: 2px 8px;
   border-radius: 10px;
-  min-width: 18px;
-  text-align: center;
 }
 
-.chip.active .chip-badge {
-  background: var(--android-primary);
-}
-
-/* Lista de Tareas */
+/* Content Area */
 .content-area {
   flex: 1;
-  padding: 10px 20px 100px;
-  max-width: 800px;
+  padding: 16px;
+  max-width: 900px;
   margin: 0 auto;
   width: 100%;
 }
 
-.list-header {
+.context-indicator {
+  padding: 4px 8px 16px;
+  font-size: 0.85rem;
+  color: var(--m3-outline);
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
-  margin-bottom: 16px;
-  padding: 0 4px;
+  align-items: center;
 }
 
-.list-title {
-  font-size: 1.2rem;
+.clear-link {
+  background: var(--m3-surface-variant);
+  border: none;
+  color: var(--m3-primary);
   font-weight: 700;
-  color: var(--android-on-secondary-container);
+  cursor: pointer;
+  padding: 4px 12px;
+  border-radius: 100px;
 }
 
-.list-count {
-  font-size: 0.85rem;
-  color: var(--android-outline);
-}
-
+/* Task Card */
 .task-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
-.task-item {
-  background: #FFFFFF;
+.task-card {
+  background: white;
   border-radius: 20px;
   padding: 16px;
   display: flex;
   align-items: center;
   gap: 16px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.04);
-  transition: all 0.2s ease;
-  border-left: 4px solid transparent;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  border: 1px solid var(--m3-surface-variant);
+  transition: var(--transition-smooth);
 }
 
-.task-item:active { transform: scale(0.98); }
+.task-card:active { transform: scale(0.98); }
+.task-card.completed { opacity: 0.6; background: #fafafa; }
 
-.task-item.priority-alta { border-left-color: var(--p-alta); }
-.task-item.priority-media { border-left-color: var(--p-media); }
-.task-item.priority-baja { border-left-color: var(--p-baja); }
-
-.task-item.is-completed { 
-  opacity: 0.5; 
-  background: #f8f8f8; 
-  border-left-color: #ccc;
-}
-
-.checkbox-custom {
-  width: 26px;
-  height: 26px;
-  border: 2px solid var(--android-outline);
+.custom-checkbox {
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--m3-outline);
   border-radius: 8px;
-  position: relative;
-  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-smooth);
   flex-shrink: 0;
 }
 
-.checkbox-custom.checked {
-  background: var(--android-primary);
-  border-color: var(--android-primary);
+.custom-checkbox.is-checked {
+  background: var(--m3-primary);
+  border-color: var(--m3-primary);
 }
 
-.checkbox-custom.checked::after {
-  content: '✓';
-  color: white;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 16px;
-}
+.check-mark { color: white; font-weight: bold; font-size: 16px; }
 
-.task-body { flex: 1; overflow: hidden; }
+.card-content-zone { flex: 1; cursor: pointer; overflow: hidden; }
 
-.task-main {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
+.card-header-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+.card-header-row h3 { margin: 0; font-size: 1.1rem; font-weight: 700; color: #1C1B1F; }
 
-.task-main h3 { 
-  margin: 0; 
-  font-size: 1.05rem; 
-  font-weight: 600; 
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+.tag-priority { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; padding: 2px 10px; border-radius: 10px; }
+.tag-priority.alta { color: white; background: var(--color-high); }
+.tag-priority.media { color: #333; background: var(--color-medium); }
+.tag-priority.baja { color: white; background: var(--color-low); }
 
-.priority-tag {
-  font-size: 0.65rem;
-  padding: 2px 8px;
-  border-radius: 12px;
-  text-transform: uppercase;
-  font-weight: 700;
-}
+.card-description { margin: 4px 0 10px 0; font-size: 0.95rem; color: #49454F; line-height: 1.4; }
 
-.priority-tag.alta { color: #fff; background: var(--p-alta); }
-.priority-tag.media { color: #000; background: var(--p-media); }
-.priority-tag.baja { color: #fff; background: var(--p-baja); }
+.card-footer-meta { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--m3-outline); }
 
-.desc-text {
-  margin: 4px 0;
-  font-size: 0.9rem;
-  color: #49454F;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.delete-action-btn {
-  background: none;
+.action-btn-del {
+  background: transparent;
   border: none;
-  font-size: 1.6rem;
-  color: #ccc;
+  font-size: 1.8rem;
+  color: #ddd;
   padding: 8px;
   line-height: 1;
-  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-
-.delete-action-btn:hover { color: var(--p-alta); background: #fee; }
 
 /* FAB */
-.fab {
+.fab-android {
   position: fixed;
-  bottom: 30px;
+  bottom: 24px;
   right: 24px;
-  width: 64px;
-  height: 64px;
-  border-radius: 18px;
-  background: #D0BCFF;
-  color: #381E72;
+  width: 68px;
+  height: 68px;
+  border-radius: 20px;
+  background: var(--m3-secondary-container);
+  color: var(--m3-on-secondary-container);
   border: none;
-  box-shadow: 0 8px 16px rgba(103, 80, 164, 0.2);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.2);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
-}
-
-.fab-plus { font-size: 2.8rem; line-height: 1; }
-
-/* Priority Selector in Modal */
-.priority-selector-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-top: 8px;
-}
-
-.p-selector-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 8px;
-  border-radius: 16px;
-  border: 1px solid var(--android-outline);
-  background: white;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1000;
 }
 
-.p-selector-btn .dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-}
+.plus-sign { font-size: 2.5rem; font-weight: 300; }
 
-.p-selector-btn.alta .dot { background: var(--p-alta); }
-.p-selector-btn.media .dot { background: var(--p-media); }
-.p-selector-btn.baja .dot { background: var(--p-baja); }
-
-.p-selector-btn.is-selected {
-  background: var(--android-secondary-container);
-  border-color: var(--android-primary);
-  border-width: 2px;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(103, 80, 164, 0.1);
-}
-
-.p-selector-btn.is-selected span {
-  font-weight: 700;
-  color: var(--android-primary);
-}
-
-/* Modal Estilo Sheet (Android 14) */
-.modal-backdrop {
+/* Modal Sheet */
+.sheet-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(2px);
+  background: rgba(0,0,0,0.5);
+  z-index: 2000;
   display: flex;
   align-items: flex-end;
-  justify-content: center;
-  z-index: 2000;
 }
 
-.modal-sheet {
+.sheet-container {
   background: white;
   width: 100%;
   max-width: 600px;
-  padding: 12px 24px 40px;
-  border-radius: 28px 28px 0 0;
-  animation: slideUp 0.3s cubic-bezier(0, 1, 0, 1);
+  margin: 0 auto;
+  padding: 12px 24px 48px;
+  border-radius: 32px 32px 0 0;
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
-.modal-drag-handle {
-  width: 36px;
-  height: 5px;
-  background: #e0e0e0;
-  border-radius: 10px;
-  margin: 0 auto 20px;
-}
+.sheet-handle { width: 36px; height: 5px; background: #e0e0e0; border-radius: 10px; margin: 0 auto 20px; }
 
-.main-input {
+.input-underlined {
   width: 100%;
   border: none;
-  font-size: 1.5rem;
-  padding: 12px 0;
-  border-bottom: 2px solid #eee;
-  outline: none;
-  color: var(--android-on-secondary-container);
+  border-bottom: 2px solid var(--m3-surface-variant);
+  padding: 16px 0;
+  font-size: 1.4rem;
   background: transparent;
 }
 
-.main-input:focus { border-bottom-color: var(--android-primary); }
+.input-underlined:focus { border-bottom-color: var(--m3-primary); }
 
-.section-label {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--android-primary);
-  margin: 20px 0 10px;
-  display: block;
-}
-
-.submit-btn-android {
+.btn-primary-full {
   width: 100%;
   padding: 18px;
-  background: var(--android-primary);
+  background: var(--m3-primary);
   color: white;
   border: none;
   border-radius: 100px;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   font-weight: 700;
   margin-top: 32px;
-  box-shadow: 0 4px 12px rgba(103, 80, 164, 0.2);
+  box-shadow: 0 4px 12px rgba(103, 80, 164, 0.25);
 }
 
-/* Android Toast */
-.android-toast {
-  position: fixed;
-  bottom: 40px;
-  left: 50%;
-  transform: translateX(-50%) translateY(120px);
-  background: #313033;
-  color: white;
-  padding: 14px 20px;
-  border-radius: 16px;
-  min-width: 320px;
-  opacity: 0;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1.5);
-  z-index: 3000;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
 }
 
-.android-toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+.empty-icon { font-size: 4rem; color: var(--m3-surface-variant); }
 
-.text-btn {
-  background: none;
-  border: none;
-  color: var(--android-primary);
+.primary-outline-btn {
+  background: white;
+  border: 2px solid var(--m3-primary);
+  color: var(--m3-primary);
+  padding: 12px 24px;
+  border-radius: 100px;
   font-weight: 700;
-  margin-top: 10px;
-  padding: 10px;
-  cursor: pointer;
+  margin-top: 20px;
 }
 
-/* Animations */
-.animate-slide-in {
-  animation: itemSlide 0.4s ease forwards;
-}
-
-@keyframes itemSlide {
-  from { opacity: 0; transform: translateX(-20px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-.ripple {
-  position: relative;
-  overflow: hidden;
-}
-
-.ripple:after {
-  content: "";
-  display: block;
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  top: 0;
-  left: 0;
-  pointer-events: none;
-  background-image: radial-gradient(circle, #fff 10%, transparent 10.01%);
-  background-repeat: no-repeat;
-  background-position: 50%;
-  transform: scale(10, 10);
-  opacity: 0;
-  transition: transform .5s, opacity 1s;
-}
-
-.ripple:active:after {
-  transform: scale(0, 0);
-  opacity: .3;
-  transition: 0s;
-}
+/* Utils */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.ripple { position: relative; overflow: hidden; }
+.animate-fade-in { animation: fadeIn 0.5s ease-out; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.animate-slide-up { animation: slideUpItem 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+@keyframes slideUpItem { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
