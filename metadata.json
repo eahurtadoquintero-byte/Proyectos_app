@@ -1,0 +1,6 @@
+{
+  "name": "Task Master",
+  "description": "Aplicación de gestión de tareas inspirada en Android Studio con sistema de prioridades, filtros y recordatorios inteligentes.",
+  "requestFramePermissions": [],
+  "prompt": "Gestionar tareas diarias con prioridades y recordatorios"
+}
